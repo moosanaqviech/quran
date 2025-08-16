@@ -6,11 +6,15 @@ public class VerseData {
     private String reference;
     private String category;
 
-    public VerseData(String arabicText, String englishTranslation, String reference, String category) {
+    private String origin;
+
+    public VerseData(String arabicText, String englishTranslation, String reference, String category, String origin) {
         this.arabicText = arabicText;
         this.englishTranslation = englishTranslation;
         this.reference = reference;
         this.category = category;
+        this.origin = origin;
+
     }
 
     // Getters
@@ -18,4 +22,6 @@ public class VerseData {
     public String getEnglishTranslation() { return englishTranslation; }
     public String getReference() { return reference; }
     public String getCategory() { return category; }
+
+    public String getOrigin() {return origin;}
 }

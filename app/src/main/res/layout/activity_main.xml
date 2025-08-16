@@ -68,6 +68,7 @@
                 app:cardElevation="2dp">
 
                 <LinearLayout
+                    android:id="@+id/content"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -99,6 +100,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/verse_of_day_arabic"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً"
@@ -109,6 +111,7 @@
                         android:fontFamily="serif" />
 
                     <TextView
+                        android:id="@+id/verse_of_day_english"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Our Lord, give us good in this world and good in the hereafter."
@@ -118,6 +121,7 @@
                         android:layout_marginBottom="12dp" />
 
                     <TextView
+                        android:id="@+id/verse_of_day_reference"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Al-Baqarah 2:201"
@@ -144,6 +148,7 @@
                     android:gravity="center">
 
                     <TextView
+                        android:id="@+id/total_verses_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="6"
@@ -168,6 +173,7 @@
                     android:gravity="center">
 
                     <TextView
+                        android:id="@+id/favorites_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
@@ -674,7 +680,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_launcher_background"
+                android:src="@drawable/ic_home"
                 app:tint="#4CAF50"
                 android:layout_marginBottom="4dp" />
 
@@ -701,14 +707,14 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_launcher_background"
+                android:src="@drawable/ic_book"
                 app:tint="#999999"
                 android:layout_marginBottom="4dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Verses"
+                android:text="Ayats"
                 android:textSize="12sp"
                 android:textColor="#999999" />
 
@@ -728,7 +734,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_launcher_background"
+                android:src="@drawable/ic_bookmark"
                 app:tint="#999999"
                 android:layout_marginBottom="4dp" />
 
@@ -755,7 +761,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_launcher_background"
+                android:src="@drawable/ic_settings"
                 app:tint="#999999"
                 android:layout_marginBottom="4dp" />
 

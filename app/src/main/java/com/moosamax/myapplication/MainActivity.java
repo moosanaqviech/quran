@@ -1,6 +1,6 @@
 package com.moosamax.myapplication;
 
-// MainActivity.java - Complete implementation with bottom navigation
+// MainActivity.java - Complete implementation with bottom navigation and dynamic verse content
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -9,11 +9,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -22,6 +26,13 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout versesTab;
     private LinearLayout favoritesTab;
     private LinearLayout settingsTab;
+
+    // Content views
+    private TextView verseOfDayArabic;
+    private TextView verseOfDayEnglish;
+    private TextView verseOfDayReference;
+    private TextView totalVersesCount;
+    private TextView favoritesCount;
 
     // Current selected tab index (0=Home, 1=Verses, 2=Favorites, 3=Settings)
     private int currentTabIndex = 0;
@@ -32,7 +43,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Initialize views
+        initViews();
         initBottomNavigation();
+
+        // Load verse content
+        loadVerseContent();
+        updateStatistics();
 
         // Request notification permission for Android 13+
         requestNotificationPermission();
@@ -45,6 +61,169 @@ public class MainActivity extends AppCompatActivity {
 
         // Set home as selected by default
         updateTabSelection(0);
+    }
+
+    /**
+     * Initialize content views
+     */
+    private void initViews() {
+        // Find content views - these IDs should match your layout
+        verseOfDayArabic = findViewById(R.id.verse_of_day_arabic);
+        verseOfDayEnglish = findViewById(R.id.verse_of_day_english);
+        verseOfDayReference = findViewById(R.id.verse_of_day_reference);
+        totalVersesCount = findViewById(R.id.total_verses_count);
+        favoritesCount = findViewById(R.id.favorites_count);
+
+        // If these TextViews don't exist in your current layout, we'll find them by content
+        if (verseOfDayArabic == null) {
+            findTextViewsByContent();
+        }
+    }
+
+    /**
+     * Fallback method to find TextViews by their current content
+     * This is used if the IDs don't match the layout
+     */
+    private void findTextViewsByContent() {
+        // Find all TextViews in the layout
+        LinearLayout mainLayout = findViewById(android.R.id.content);
+        findTextViewsRecursively(mainLayout);
+    }
+
+    /**
+     * Recursively search for TextViews with specific content patterns
+     */
+    private void findTextViewsRecursively(View view) {
+        if (view instanceof TextView) {
+            TextView textView = (TextView) view;
+            String text = textView.getText().toString();
+
+            // Identify TextViews by their current content
+            if (text.contains("رَبَّنَا آتِنَا فِي الدُّنْيَا")) {
+                verseOfDayArabic = textView;
+            } else if (text.contains("Our Lord, give us good")) {
+                verseOfDayEnglish = textView;
+            } else if (text.contains("Al-Baqarah 2:201")) {
+                verseOfDayReference = textView;
+            } else if (text.equals("6")) {
+                totalVersesCount = textView;
+            } else if (text.equals("0") && favoritesCount == null) {
+                favoritesCount = textView;
+            }
+        } else if (view instanceof LinearLayout) {
+            LinearLayout layout = (LinearLayout) view;
+            for (int i = 0; i < layout.getChildCount(); i++) {
+                findTextViewsRecursively(layout.getChildAt(i));
+            }
+        }
+    }
+
+    /**
+     * Load verse content from repository
+     */
+    private void loadVerseContent() {
+        // Get a random verse for "Verse of the Day"
+        VerseData todayVerse = VerseRepository.getRandomVerse();
+
+        if (verseOfDayArabic != null) {
+            verseOfDayArabic.setText(todayVerse.getArabicText());
+        }
+
+        if (verseOfDayEnglish != null) {
+            verseOfDayEnglish.setText(todayVerse.getEnglishTranslation());
+        }
+
+        if (verseOfDayReference != null) {
+            verseOfDayReference.setText(todayVerse.getReference());
+        }
+    }
+
+    /**
+     * Update statistics display
+     */
+    private void updateStatistics() {
+        List<VerseData> allVerses = VerseRepository.getAllVerses();
+
+        if (totalVersesCount != null) {
+            totalVersesCount.setText(String.valueOf(allVerses.size()));
+        }
+
+        // For now, favorites count remains 0
+        // In a future update, you could implement a favorites system
+        if (favoritesCount != null) {
+            favoritesCount.setText("0");
+        }
+
+        // Update category counts
+        updateCategoryStatistics(allVerses);
+    }
+
+    /**
+     * Update category statistics in the UI
+     */
+    private void updateCategoryStatistics(List<VerseData> verses) {
+        // Count verses by category
+        Map<String, Integer> categoryCounts = new HashMap<>();
+        for (VerseData verse : verses) {
+            String category = verse.getCategory();
+            categoryCounts.put(category, categoryCounts.getOrDefault(category, 0) + 1);
+        }
+
+        // Update category counts in the UI
+        updateCategoryCount("Trust in Allah", categoryCounts.getOrDefault("Trust in Allah", 0));
+        updateCategoryCount("Hope & Patience", categoryCounts.getOrDefault("Hope & Patience", 0));
+        updateCategoryCount("Mercy & Forgiveness", categoryCounts.getOrDefault("Mercy & Forgiveness", 0));
+        updateCategoryCount("Dua & Supplication", categoryCounts.getOrDefault("Dua & Supplication", 0));
+        updateCategoryCount("Patience & Perseverance", categoryCounts.getOrDefault("Patience & Perseverance", 0));
+    }
+
+    /**
+     * Update count for a specific category
+     */
+    private void updateCategoryCount(String categoryName, int count) {
+        // This method searches for TextViews containing category counts
+        // You might need to adjust this based on your exact layout structure
+        LinearLayout mainLayout = findViewById(R.id.content);
+        updateCategoryCountRecursively(mainLayout, categoryName, count);
+    }
+
+    /**
+     * Recursively find and update category count TextViews
+     */
+    private void updateCategoryCountRecursively(View view, String categoryName, int count) {
+        if (view instanceof LinearLayout) {
+            LinearLayout layout = (LinearLayout) view;
+
+            // Check if this layout contains the category name
+            boolean foundCategory = false;
+            TextView countTextView = null;
+
+            for (int i = 0; i < layout.getChildCount(); i++) {
+                View child = layout.getChildAt(i);
+                if (child instanceof TextView) {
+                    TextView textView = (TextView) child;
+                    String text = textView.getText().toString();
+
+                    if (text.equals(categoryName)) {
+                        foundCategory = true;
+                    } else if (foundCategory && text.contains("verses")) {
+                        countTextView = textView;
+                        break;
+                    }
+                }
+            }
+
+            // Update the count if we found the category
+            if (foundCategory && countTextView != null) {
+                String countText = count == 1 ? "1 verse" : count + " verses";
+                countTextView.setText(countText);
+            }
+
+            // Continue searching in child layouts
+            for (int i = 0; i < layout.getChildCount(); i++) {
+                updateCategoryCountRecursively(layout.getChildAt(i), categoryName, count);
+            }
+        }
     }
 
     /**
@@ -75,7 +254,9 @@ public class MainActivity extends AppCompatActivity {
 
         switch (tabIndex) {
             case 0: // Home
-                // Already on home - no navigation needed
+                // Already on home - refresh content
+                loadVerseContent();
+                updateStatistics();
                 updateTabSelection(0);
                 break;
 
@@ -166,32 +347,42 @@ public class MainActivity extends AppCompatActivity {
      * Navigate to Verses activity/fragment
      */
     private void navigateToVerses() {
-        // TODO: Implement navigation to verses list
-        // For now, show a toast message
-        Toast.makeText(this, "Verses feature coming soon!", Toast.LENGTH_SHORT).show();
+        // Show all verses with their categories
+        showAllVerses();
+        updateTabSelection(0); // Keep home selected for now
+    }
 
-        // Keep home selected for now since we don't have verses activity yet
-        updateTabSelection(0);
+    /**
+     * Show all verses in a dialog or toast (placeholder implementation)
+     */
+    private void showAllVerses() {
+        List<VerseData> allVerses = VerseRepository.getAllVerses();
+        StringBuilder versesText = new StringBuilder();
 
-        // Example of how to navigate to a new activity:
-        // Intent intent = new Intent(this, VersesActivity.class);
-        // startActivity(intent);
+        for (VerseData verse : allVerses) {
+            versesText.append(verse.getReference())
+                    .append("\n")
+                    .append(verse.getEnglishTranslation())
+                    .append("\n")
+                    .append("Category: ")
+                    .append(verse.getCategory())
+                    .append("\n\n");
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("All Verses (" + allVerses.size() + ")")
+                .setMessage(versesText.toString())
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     /**
      * Navigate to Favorites activity/fragment
      */
     private void navigateToFavorites() {
-        // TODO: Implement navigation to favorites
-        // For now, show a toast message
-        Toast.makeText(this, "Favorites feature coming soon!", Toast.LENGTH_SHORT).show();
-
-        // Keep home selected for now since we don't have favorites activity yet
+        // TODO: Implement favorites functionality
+        Toast.makeText(this, "Favorites feature coming soon!\nCurrently: 0 favorites", Toast.LENGTH_SHORT).show();
         updateTabSelection(0);
-
-        // Example of how to navigate to a new activity:
-        // Intent intent = new Intent(this, FavoritesActivity.class);
-        // startActivity(intent);
     }
 
     /**
@@ -200,25 +391,22 @@ public class MainActivity extends AppCompatActivity {
     private void navigateToSettings() {
         Intent intent = new Intent(this, NotificationSettingsActivity.class);
         startActivity(intent);
-
-        // Note: We don't update tab selection here because we're navigating to a new activity
-        // When user returns, home will still be selected
     }
 
     /**
-     * Show dialog to setup notifications when app first launches
+     * Show dialog to setup hourly notifications when app first launches
      */
     private void showNotificationSetupDialog() {
         new AlertDialog.Builder(this)
-                .setTitle("Daily Verse Notifications")
-                .setMessage("Would you like to receive a daily Quran verse notification?")
+                .setTitle("Hourly Verse Notifications")
+                .setMessage("Would you like to receive hourly Quran verse notifications during the day?\n\nDefault schedule: 9:00 AM to 9:00 PM")
                 .setPositiveButton("Yes", (dialog, which) -> {
-                    // Enable notifications with default time (9:00 AM)
-                    NotificationScheduler.scheduleVerseNotifications(this, 9, 0);
-                    Toast.makeText(this, "Daily notifications enabled at 9:00 AM", Toast.LENGTH_LONG).show();
+                    // Enable hourly notifications with default time period (9 AM to 9 PM)
+                    NotificationScheduler.scheduleHourlyVerseNotifications(this, 9, 0, 21, 0);
+                    Toast.makeText(this, "Hourly notifications enabled from 9:00 AM to 9:00 PM", Toast.LENGTH_LONG).show();
                 })
                 .setNegativeButton("Not now", null)
-                .setNeutralButton("Settings", (dialog, which) -> {
+                .setNeutralButton("Customize", (dialog, which) -> {
                     navigateToSettings();
                 })
                 .show();
@@ -253,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show();
             } else {
                 // Permission denied
-                Toast.makeText(this, "Notification permission is required for daily verses",
+                Toast.makeText(this, "Notification permission is required for hourly verses",
                         Toast.LENGTH_LONG).show();
             }
         }
@@ -275,12 +463,25 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Method to manually send test notification (for debugging)
+     * This will only send if within the current notification period
      */
     public void sendTestNotification() {
-        Intent serviceIntent = new Intent(this, VerseNotificationService.class);
-        serviceIntent.setAction("SEND_VERSE_NOTIFICATION");
-        startService(serviceIntent);
-        Toast.makeText(this, "Test notification sent", Toast.LENGTH_SHORT).show();
+        if (NotificationScheduler.isWithinNotificationPeriod(this)) {
+            Intent serviceIntent = new Intent(this, VerseNotificationService.class);
+            serviceIntent.setAction("SEND_VERSE_NOTIFICATION");
+            startService(serviceIntent);
+            Toast.makeText(this, "Test notification sent", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Current time is outside notification period", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Public method to refresh verse content (can be called from menu items, etc.)
+     */
+    public void refreshVerseOfDay(View view) {
+        loadVerseContent();
+        Toast.makeText(this, "Verse of the day refreshed", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -295,5 +496,8 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Reset to home tab when returning from other activities
         updateTabSelection(0);
+        // Refresh content when returning to the app
+        loadVerseContent();
+        updateStatistics();
     }
 }

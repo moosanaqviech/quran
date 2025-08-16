@@ -62,7 +62,7 @@ public class VerseNotificationService extends Service {
         );
 
         Notification foregroundNotification = new NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_book)
                 .setContentTitle("Quran Verses")
                 .setContentText("Preparing daily verse...")
                 .setContentIntent(pendingIntent)
@@ -113,8 +113,8 @@ public class VerseNotificationService extends Service {
 
         // Build the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground) // You need to add this icon
-                .setContentTitle("Verse of the Day")
+                .setSmallIcon(R.drawable.ic_book) // You need to add this icon
+                .setContentTitle("Ayah of the Hour")
                 .setContentText(verse.getEnglishTranslation())
                 .setStyle(new NotificationCompat.BigTextStyle()
                         .bigText(verse.getArabicText() + "\n\n" +

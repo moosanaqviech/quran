@@ -41,7 +41,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        // Initialize the verse repository
+        VerseRepository.getInstance(this).initialize();
         // Initialize views
         initViews();
         initBottomNavigation();
@@ -142,20 +143,30 @@ public class MainActivity extends AppCompatActivity {
      * Update statistics display
      */
     private void updateStatistics() {
-        List<VerseData> allVerses = VerseRepository.getAllVerses();
+        int totalVerseCount = 6326;//VerseRepository.getInstance(this).getTotalVerseCount();
 
         if (totalVersesCount != null) {
-            totalVersesCount.setText(String.valueOf(allVerses.size()));
+            totalVersesCount.setText(String.valueOf(totalVerseCount));
         }
 
         // For now, favorites count remains 0
-        // In a future update, you could implement a favorites system
         if (favoritesCount != null) {
             favoritesCount.setText("0");
         }
 
         // Update category counts
-        updateCategoryStatistics(allVerses);
+        updateCategoryStatistics();
+    }
+
+    // Update the updateCategoryStatistics method:
+    private void updateCategoryStatistics() {
+        // Get all categories and update their counts
+        List<String> categories = VerseRepository.getAllCategories();
+
+        for (String category : categories) {
+            int count = VerseRepository.getVerseCountByCategory(category);
+            updateCategoryCount(category, count);
+        }
     }
 
     /**

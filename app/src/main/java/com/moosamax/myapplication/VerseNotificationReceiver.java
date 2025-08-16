@@ -20,29 +20,30 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
 
         // Check if this is inexact mode (for devices without exact alarm permission)
         boolean inexactMode = intent.getBooleanExtra("INEXACT_MODE", false);
+        int customInterval = intent.getIntExtra("CUSTOM_INTERVAL", 60); // Default 60 minutes
 
         if (inexactMode) {
-            // For inexact mode, check if current time matches any scheduled hour
-            if (!isTimeForNotification(context)) {
+            // For inexact mode, check if current time matches any scheduled interval
+            if (!isTimeForCustomNotification(context, customInterval)) {
                 return; // Not the right time yet
             }
 
-            // Check if we already sent a notification in this hour
-            if (wasNotificationSentThisHour(context)) {
-                return; // Already sent this hour
+            // Check if we already sent a notification in this interval period
+            if (wasNotificationSentInInterval(context, customInterval)) {
+                return; // Already sent in this interval
             }
         }
 
         // Check if within notification period
         if (!NotificationScheduler.isWithinNotificationPeriod(context)) {
             // If outside notification period, reschedule for next valid time
-            rescheduleNextNotification(context);
+            rescheduleNextCustomNotification(context, customInterval);
             return;
         }
 
-        // Mark that we sent a notification this hour (for inexact mode)
+        // Mark that we sent a notification this interval (for inexact mode)
         if (inexactMode) {
-            markNotificationSentThisHour(context);
+            markNotificationSentInInterval(context, customInterval);
         }
 
         // Send the notification
@@ -58,76 +59,120 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
         // For Android M and above with exact alarms, reschedule the next notification
         // because setExactAndAllowWhileIdle doesn't repeat automatically
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !inexactMode) {
-            rescheduleNextNotification(context);
+            rescheduleNextCustomNotification(context, customInterval);
         }
     }
 
     /**
-     * Check if current time is at the start of an hour within notification period
+     * Check if current time is appropriate for a custom interval notification
      */
-    private boolean isTimeForNotification(Context context) {
+    private boolean isTimeForCustomNotification(Context context, int intervalMinutes) {
         Calendar now = Calendar.getInstance();
-        int currentMinute = now.get(Calendar.MINUTE);
-
-        // Only trigger notifications at the top of each hour (0-4 minutes past)
-        // This gives a window for inexact alarms
-        if (currentMinute > 4) {
-            return false;
-        }
-
         int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+        int currentTimeMinutes = currentHour * 60 + currentMinute;
+
+        // Get notification settings
         int[] timePeriod = NotificationScheduler.getNotificationTimePeriod(context);
-        int startHour = timePeriod[0];
-        int endHour = timePeriod[2];
+        int startTimeMinutes = timePeriod[0] * 60 + timePeriod[1];
 
-        // Check if current hour is within notification period
-        if (endHour <= startHour) {
-            // Crosses midnight
-            return currentHour >= startHour || currentHour <= endHour;
+        // Calculate how many intervals have passed since start time
+        int minutesSinceStart;
+        if (currentTimeMinutes >= startTimeMinutes) {
+            minutesSinceStart = currentTimeMinutes - startTimeMinutes;
         } else {
-            // Same day
-            return currentHour >= startHour && currentHour <= endHour;
+            // Handle overnight periods
+            minutesSinceStart = (24 * 60 - startTimeMinutes) + currentTimeMinutes;
         }
+
+        // Check if we're at an interval boundary (with tolerance for inexact alarms)
+        int intervalRemainder = minutesSinceStart % intervalMinutes;
+
+        // Allow a window for inexact timing based on interval length
+        int toleranceMinutes = Math.min(intervalMinutes / 4, 10); // Max 10 minutes tolerance
+        if (toleranceMinutes < 2) toleranceMinutes = 2; // Minimum 2 minutes tolerance
+
+        return intervalRemainder <= toleranceMinutes || intervalRemainder >= (intervalMinutes - toleranceMinutes);
     }
 
     /**
-     * Check if we already sent a notification this hour (prevents duplicates)
+     * Check if we already sent a notification in this interval period
      */
-    private boolean wasNotificationSentThisHour(Context context) {
+    private boolean wasNotificationSentInInterval(Context context, int intervalMinutes) {
         SharedPreferences prefs = context.getSharedPreferences("NotificationTracker", Context.MODE_PRIVATE);
         Calendar now = Calendar.getInstance();
-        String hourKey = now.get(Calendar.YEAR) + "_" + now.get(Calendar.DAY_OF_YEAR) + "_" + now.get(Calendar.HOUR_OF_DAY);
-        return prefs.getBoolean(hourKey, false);
+
+        // Create a unique key for this interval period
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+        int currentTimeMinutes = currentHour * 60 + currentMinute;
+
+        // Calculate which interval period we're in
+        int[] timePeriod = NotificationScheduler.getNotificationTimePeriod(context);
+        int startTimeMinutes = timePeriod[0] * 60 + timePeriod[1];
+
+        int minutesSinceStart;
+        if (currentTimeMinutes >= startTimeMinutes) {
+            minutesSinceStart = currentTimeMinutes - startTimeMinutes;
+        } else {
+            // Handle overnight periods
+            minutesSinceStart = (24 * 60 - startTimeMinutes) + currentTimeMinutes;
+        }
+
+        int intervalPeriod = minutesSinceStart / intervalMinutes;
+
+        String intervalKey = now.get(Calendar.YEAR) + "_" + now.get(Calendar.DAY_OF_YEAR) +
+                "_" + intervalMinutes + "_" + intervalPeriod;
+
+        return prefs.getBoolean(intervalKey, false);
     }
 
     /**
-     * Mark that we sent a notification this hour
+     * Mark that we sent a notification in this interval period
      */
-    private void markNotificationSentThisHour(Context context) {
+    private void markNotificationSentInInterval(Context context, int intervalMinutes) {
         SharedPreferences prefs = context.getSharedPreferences("NotificationTracker", Context.MODE_PRIVATE);
         Calendar now = Calendar.getInstance();
-        String hourKey = now.get(Calendar.YEAR) + "_" + now.get(Calendar.DAY_OF_YEAR) + "_" + now.get(Calendar.HOUR_OF_DAY);
 
-        prefs.edit().putBoolean(hourKey, true).apply();
+        // Create the same key as in wasNotificationSentInInterval
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+        int currentTimeMinutes = currentHour * 60 + currentMinute;
 
-        // Clean up old entries (older than 2 days)
+        int[] timePeriod = NotificationScheduler.getNotificationTimePeriod(context);
+        int startTimeMinutes = timePeriod[0] * 60 + timePeriod[1];
+
+        int minutesSinceStart;
+        if (currentTimeMinutes >= startTimeMinutes) {
+            minutesSinceStart = currentTimeMinutes - startTimeMinutes;
+        } else {
+            minutesSinceStart = (24 * 60 - startTimeMinutes) + currentTimeMinutes;
+        }
+
+        int intervalPeriod = minutesSinceStart / intervalMinutes;
+
+        String intervalKey = now.get(Calendar.YEAR) + "_" + now.get(Calendar.DAY_OF_YEAR) +
+                "_" + intervalMinutes + "_" + intervalPeriod;
+
+        prefs.edit().putBoolean(intervalKey, true).apply();
+
+        // Clean up old entries (older than 3 days)
         cleanupOldNotificationRecords(prefs, now);
     }
 
     /**
-     * Clean up old notification tracking records to prevent SharedPreferences from growing too large
+     * Clean up old notification tracking records
      */
     private void cleanupOldNotificationRecords(SharedPreferences prefs, Calendar now) {
         SharedPreferences.Editor editor = prefs.edit();
 
-        // Remove entries older than 2 days
+        // Remove entries older than 3 days
         Calendar cutoff = Calendar.getInstance();
-        cutoff.add(Calendar.DAY_OF_YEAR, -2);
+        cutoff.add(Calendar.DAY_OF_YEAR, -3);
         String cutoffPrefix = cutoff.get(Calendar.YEAR) + "_" + cutoff.get(Calendar.DAY_OF_YEAR);
 
-        // This is a simple cleanup - in a production app you might want a more sophisticated approach
         for (String key : prefs.getAll().keySet()) {
-            if (key.compareTo(cutoffPrefix) < 0) {
+            if (key.length() > 10 && key.compareTo(cutoffPrefix) < 0) {
                 editor.remove(key);
             }
         }
@@ -136,9 +181,9 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Reschedule the next notification for devices that don't support repeating exact alarms
+     * Reschedule the next notification for custom intervals
      */
-    private void rescheduleNextNotification(Context context) {
+    private void rescheduleNextCustomNotification(Context context, int intervalMinutes) {
         // Only reschedule for exact alarm mode
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         boolean canScheduleExact = true;
@@ -151,18 +196,18 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
             return; // Let inexact repeating alarm handle it
         }
 
+        // Get current interval from settings
+        int currentInterval = NotificationScheduler.getNotificationInterval(context);
+
         Calendar now = Calendar.getInstance();
         Calendar nextNotification = Calendar.getInstance();
-        nextNotification.add(Calendar.HOUR_OF_DAY, 1);
-        nextNotification.set(Calendar.MINUTE, 0);
-        nextNotification.set(Calendar.SECOND, 0);
-        nextNotification.set(Calendar.MILLISECOND, 0);
+        nextNotification.add(Calendar.MINUTE, currentInterval);
 
-        // Check if next hour is still within notification period
+        // Check if next notification time is still within notification period
+        int[] timePeriod = NotificationScheduler.getNotificationTimePeriod(context);
         int nextHour = nextNotification.get(Calendar.HOUR_OF_DAY);
         int nextMinute = nextNotification.get(Calendar.MINUTE);
 
-        int[] timePeriod = NotificationScheduler.getNotificationTimePeriod(context);
         int startTimeMinutes = timePeriod[0] * 60 + timePeriod[1];
         int endTimeMinutes = timePeriod[2] * 60 + timePeriod[3];
         int nextTimeMinutes = nextHour * 60 + nextMinute;
@@ -181,6 +226,8 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
             nextNotification.add(Calendar.DAY_OF_YEAR, 1);
             nextNotification.set(Calendar.HOUR_OF_DAY, timePeriod[0]);
             nextNotification.set(Calendar.MINUTE, timePeriod[1]);
+            nextNotification.set(Calendar.SECOND, 0);
+            nextNotification.set(Calendar.MILLISECOND, 0);
         }
 
         // Create and schedule the alarm
@@ -207,5 +254,37 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
                     pendingIntent
             );
         }
+    }
+
+    /**
+     * Legacy method for backward compatibility with hourly notifications
+     */
+    @Deprecated
+    private boolean isTimeForNotification(Context context) {
+        return isTimeForCustomNotification(context, 60); // Default to hourly
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     */
+    @Deprecated
+    private boolean wasNotificationSentThisHour(Context context) {
+        return wasNotificationSentInInterval(context, 60);
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     */
+    @Deprecated
+    private void markNotificationSentThisHour(Context context) {
+        markNotificationSentInInterval(context, 60);
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     */
+    @Deprecated
+    private void rescheduleNextNotification(Context context) {
+        rescheduleNextCustomNotification(context, 60);
     }
 }

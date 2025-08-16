@@ -50,7 +50,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Hourly Verse Notifications"
+                            android:text="Verse Notifications"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="#333333" />
@@ -58,7 +58,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Receive Quran verses every hour during your selected time period"
+                            android:text="Receive Quran verses at custom intervals during your selected time period"
                             android:textSize="14sp"
                             android:textColor="#666666"
                             android:layout_marginTop="4dp" />
@@ -70,6 +70,75 @@
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
                         android:theme="@style/SwitchTheme" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Notification Interval Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Notification Interval"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="How often would you like to receive verse notifications?"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="12dp" />
+
+                <Spinner
+                    android:id="@+id/interval_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@android:drawable/btn_dropdown"
+                    android:padding="12dp" />
+
+                <!-- Preview -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="#E3F2FD"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_info"
+                        android:layout_marginEnd="8dp"
+                        app:tint="#2196F3" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Choose your preferred notification frequency"
+                        android:textSize="12sp"
+                        android:textColor="#1976D2"
+                        android:textStyle="italic" />
 
                 </LinearLayout>
 
@@ -104,7 +173,7 @@
                     android:id="@+id/selected_period_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Hourly from 09:00 to 21:00"
+                    android:text="Every hour from 09:00 to 21:00"
                     android:textSize="14sp"
                     android:textColor="#666666"
                     android:layout_marginBottom="16dp" />
@@ -197,7 +266,7 @@
                     <ImageView
                         android:layout_width="16dp"
                         android:layout_height="16dp"
-                        android:src="@drawable/ic_launcher_background"
+                        android:src="@drawable/ic_notification"
                         android:layout_marginEnd="8dp"
                         app:tint="#2196F3" />
 
@@ -210,6 +279,101 @@
                         android:textSize="12sp"
                         android:textColor="#2196F3"
                         android:textStyle="italic" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Quick Presets Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_star"
+                        android:layout_marginEnd="8dp"
+                        app:tint="#FF9800" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Quick Presets"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Popular notification schedules:"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Preset Buttons Grid -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Button
+                        android:id="@+id/preset_light"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="Light\n(Every 4h)"
+                        android:textSize="11sp"
+                        android:backgroundTint="#E8F5E8"
+                        android:textColor="#4CAF50"
+                        style="?android:attr/buttonStyle" />
+
+                    <Button
+                        android:id="@+id/preset_moderate"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="Moderate\n(Every 2h)"
+                        android:textSize="11sp"
+                        android:backgroundTint="#E3F2FD"
+                        android:textColor="#2196F3"
+                        style="?android:attr/buttonStyle" />
+
+                    <Button
+                        android:id="@+id/preset_frequent"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="Frequent\n(Every 1h)"
+                        android:textSize="11sp"
+                        android:backgroundTint="#FFF3E0"
+                        android:textColor="#FF9800"
+                        style="?android:attr/buttonStyle" />
 
                 </LinearLayout>
 
@@ -239,14 +403,14 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_launcher_background"
+                        android:src="@drawable/ic_info"
                         android:layout_marginEnd="8dp"
                         app:tint="#FF9800" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="About Hourly Notifications"
+                        android:text="About Custom Notifications"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="#333333" />
@@ -256,7 +420,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="• Notifications will be sent every hour during your selected time period\n• Each notification contains a different verse from the Quran\n• You can customize both start and end times\n• The app works even when closed\n• All notifications are local and don't require internet"
+                    android:text="• Notifications will be sent at your chosen interval during the selected time period\n• Each notification contains a different verse from the Quran\n• You can customize both timing and frequency\n• The app works even when closed\n• All notifications are local and don't require internet\n• Very frequent intervals (less than 30 minutes) may drain battery faster"
                     android:textSize="14sp"
                     android:textColor="#666666"
                     android:lineSpacingExtra="4dp" />

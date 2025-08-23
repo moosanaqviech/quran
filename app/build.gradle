@@ -10,15 +10,15 @@ android {
         applicationId "com.moosamax.myapplication"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.0.01"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -35,4 +35,16 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
+    implementation 'com.google.code.gson:gson:2.8.9'
+
+    // RecyclerView (might already be included)
+    implementation 'androidx.recyclerview:recyclerview:1.3.0'
+
+    // CardView (might already be included)
+    implementation 'androidx.cardview:cardview:1.0.0'
+
+    // ViewPager2 (might already be included)
+    implementation 'androidx.viewpager2:viewpager2:1.0.0'
+
+    implementation "androidx.work:work-runtime:2.8.1"
 }

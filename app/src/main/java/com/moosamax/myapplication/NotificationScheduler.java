@@ -37,9 +37,9 @@ public class NotificationScheduler {
      */
     public static String[] getIntervalDisplayNames() {
         return new String[]{
-                "Every 15 minutes",
-                "Every 30 minutes",
-                "Every 45 minutes",
+//                "Every 15 minutes",
+//                "Every 30 minutes",
+//                "Every 45 minutes",
                 "Every hour",
                 "Every 2 hours",
                 "Every 3 hours",

@@ -2,6 +2,7 @@ package com.moosamax.myapplication;
 
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.util.Log;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,14 +12,15 @@ import java.util.List;
 import java.util.Random;
 
 public class VerseRepository {
+    private static final String TAG = "VerseRepository";
     private static VerseRepository instance;
     private static List<VerseData> verses = new ArrayList<>();
     private static boolean isInitialized = false;
     private static final Random random = new Random();
     private static Context context;
+
     private VerseRepository(Context context) {
         this.context = context.getApplicationContext();
-
     }
 
     public static synchronized VerseRepository getInstance(Context context) {
@@ -34,21 +36,35 @@ public class VerseRepository {
      */
     public static void initialize() {
         if (!isInitialized) {
+            Log.d(TAG, "Initializing VerseRepository...");
             loadVersesFromAssets();
             isInitialized = true;
+            Log.d(TAG, "VerseRepository initialized with " + verses.size() + " verses");
         }
     }
 
     /**
-     * Load verses from assets/quran_verses.csv file
-     * CSV format: "Arabic Text","English Translation","Reference","Category"
+     * Load verses from assets/quran_verses_new.csv file
+     * CSV format: "Arabic Text","English Translation","Reference","Category","Origin"
      */
     private static void loadVersesFromAssets() {
         verses.clear();
 
         try {
             AssetManager assetManager = context.getAssets();
-            InputStream inputStream = assetManager.open("quran_verses.csv");
+
+            // First, let's list all files in assets to debug
+            Log.d(TAG, "Listing all files in assets folder:");
+            String[] assetFiles = assetManager.list("");
+            if (assetFiles != null) {
+                for (String file : assetFiles) {
+                    Log.d(TAG, "Asset file: " + file);
+                }
+            }
+
+            // Try to open the CSV file
+            Log.d(TAG, "Attempting to open quran_verses_new.csv...");
+            InputStream inputStream = assetManager.open("quran_verses_categorized.csv");
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
 
             String line;
@@ -58,7 +74,8 @@ public class VerseRepository {
                 lineNumber++;
 
                 // Skip header line if present
-                if (lineNumber == 1 && line.startsWith("Arabic")) {
+                if (lineNumber == 1 && (line.startsWith("arabic") || line.startsWith("\"arabic"))) {
+                    Log.d(TAG, "Skipping header line: " + line);
                     continue;
                 }
 
@@ -66,22 +83,30 @@ public class VerseRepository {
                     VerseData verse = parseCSVLine(line);
                     if (verse != null) {
                         verses.add(verse);
+                        if (verses.size() <= 10) { // Log first few verses for debugging
+                            Log.d(TAG, "Loaded verse " + verses.size() + ": " + verse.getReference() );
+                            Log.d(TAG, "Arabic: " + verse.getArabicText());
+                            Log.d(TAG, "Catregory: " + verse.getCategory());
+                        }
                     }
                 } catch (Exception e) {
                     // Log error but continue processing other verses
-                    System.err.println("Error parsing line " + lineNumber + ": " + line);
-                    e.printStackTrace();
+                    Log.e(TAG, "Error parsing line " + lineNumber + ": " + line, e);
                 }
             }
 
             reader.close();
             inputStream.close();
 
-            System.out.println("Successfully loaded " + verses.size() + " verses from assets");
+            Log.i(TAG, "Successfully loaded " + verses.size() + " verses from assets");
 
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "IOException while loading verses from assets", e);
+            Log.w(TAG, "Falling back to hardcoded sample verses");
             // Fallback to hardcoded sample verses if file loading fails
+            loadFallbackVerses();
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error while loading verses", e);
             loadFallbackVerses();
         }
     }
@@ -121,14 +146,16 @@ public class VerseRepository {
         // Add the last field
         fields.add(currentField.toString().trim());
 
-        if (fields.size() >= 4) {
+        if (fields.size() >= 5) {
             String arabic = fields.get(0);
             String english = fields.get(1);
             String reference = fields.get(2);
             String category = fields.get(3);
-            String origin = fields.get(4);
+            String origin = fields.size() > 4 ? fields.get(4) : "Unknown";
 
             return new VerseData(arabic, english, reference, category, origin);
+        } else {
+            Log.w(TAG, "Insufficient fields in line (expected 4+, got " + fields.size() + "): " + line);
         }
 
         return null;
@@ -139,6 +166,7 @@ public class VerseRepository {
      */
     private static void loadFallbackVerses() {
         verses.clear();
+        Log.i(TAG, "Loading fallback verses...");
 
         // Add some sample verses as fallback
         verses.add(new VerseData(
@@ -146,7 +174,7 @@ public class VerseRepository {
                 "And whoever fears Allah - He will make for him a way out.",
                 "At-Talaq 65:2",
                 "Trust in Allah",
-                "origin"
+                "Fallback"
         ));
 
         verses.add(new VerseData(
@@ -154,7 +182,7 @@ public class VerseRepository {
                 "For indeed, with hardship [will be] ease.",
                 "Ash-Sharh 94:5",
                 "Hope & Patience",
-                "origin"
+                "Fallback"
         ));
 
         verses.add(new VerseData(
@@ -162,7 +190,7 @@ public class VerseRepository {
                 "And Allah is Forgiving and Merciful.",
                 "Al-Baqarah 2:173",
                 "Mercy & Forgiveness",
-                "origin"
+                "Fallback"
         ));
 
         verses.add(new VerseData(
@@ -170,7 +198,7 @@ public class VerseRepository {
                 "Our Lord, give us good in this world and good in the hereafter and protect us from the punishment of the Fire.",
                 "Al-Baqarah 2:201",
                 "Dua & Supplication",
-                "origin"
+                "Fallback"
         ));
 
         verses.add(new VerseData(
@@ -178,7 +206,7 @@ public class VerseRepository {
                 "And give good tidings to the patient.",
                 "Al-Baqarah 2:155",
                 "Patience & Perseverance",
-                "origin"
+                "Fallback"
         ));
 
         verses.add(new VerseData(
@@ -186,16 +214,59 @@ public class VerseRepository {
                 "Indeed, Allah is with the patient.",
                 "Al-Baqarah 2:153",
                 "Patience & Perseverance",
-                "origin"
+                "Fallback"
         ));
 
-        System.out.println("Loaded fallback verses: " + verses.size());
+        Log.i(TAG, "Loaded " + verses.size() + " fallback verses");
     }
+
+    /**
+     * Create a sample CSV file content for debugging
+     */
+    public static String getSampleCSVContent() {
+        return "\"Arabic Text\",\"English Translation\",\"Reference\",\"Category\",\"Origin\"\n" +
+                "\"وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا\",\"And whoever fears Allah - He will make for him a way out.\",\"At-Talaq 65:2\",\"Trust in Allah\",\"Sample\"\n" +
+                "\"فَإِنَّ مَعَ الْعُسْرِ يُسْرًا\",\"For indeed, with hardship [will be] ease.\",\"Ash-Sharh 94:5\",\"Hope & Patience\",\"Sample\"\n" +
+                "\"وَاللَّهُ غَفُورٌ رَّحِيمٌ\",\"And Allah is Forgiving and Merciful.\",\"Al-Baqarah 2:173\",\"Mercy & Forgiveness\",\"Sample\"";
+    }
+
+    /**
+     * Force reload verses (useful for debugging)
+     */
+    public static void forceReload() {
+        isInitialized = false;
+        verses.clear();
+        initialize();
+    }
+
+    /**
+     * Get debug information about the repository state
+     */
+    public static String getDebugInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("VerseRepository Debug Info:\n");
+        info.append("Initialized: ").append(isInitialized).append("\n");
+        info.append("Verse count: ").append(verses.size()).append("\n");
+        info.append("Context available: ").append(context != null).append("\n");
+
+        if (!verses.isEmpty()) {
+            info.append("Sample verse: ").append(verses.get(0).getReference()).append("\n");
+            info.append("Categories: ").append(getAllCategories().size()).append("\n");
+        }
+
+        return info.toString();
+    }
+
+    // Rest of the methods remain the same...
 
     /**
      * Get all verses
      */
     public static List<VerseData> getAllVerses() {
+        if (!isInitialized) {
+            Log.w(TAG, "Repository not initialized, calling initialize()");
+            initialize();
+        }
         return new ArrayList<>(verses);
     }
 
@@ -203,7 +274,12 @@ public class VerseRepository {
      * Get a random verse
      */
     public static VerseData getRandomVerse() {
+        if (!isInitialized) {
+            initialize();
+        }
+
         if (verses.isEmpty()) {
+            Log.e(TAG, "No verses available!");
             throw new IllegalStateException("Verses not initialized. Call initialize(context) first.");
         }
 

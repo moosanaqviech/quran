@@ -9,11 +9,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 public class VerseNotificationService extends Service {
-
+    private static final String TAG = "VerseNotificationService";
     private static final String CHANNEL_ID = "QuranVersesChannel";
     private static final String CHANNEL_NAME = "Quran Verses Notifications";
     private static final String FOREGROUND_CHANNEL_ID = "QuranServiceChannel";
@@ -101,33 +102,127 @@ public class VerseNotificationService extends Service {
     }
 
     private void sendVerseNotification() {
-        VerseData verse = VerseRepository.getRandomVerse();
+        try {
+            Log.d(TAG, "Preparing to send verse notification");
 
-        // Intent to open the main activity when notification is tapped
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 0, mainIntent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0
+            // Initialize repository if needed
+            VerseRepository.getInstance(this).initialize();
+
+            // Get a random verse
+            VerseData verse = VerseRepository.getRandomVerse();
+            if (verse == null) {
+                Log.e(TAG, "No verse available for notification");
+                return;
+            }
+
+            Log.d(TAG, "Selected verse for notification: " + verse.getReference());
+
+            // Create intent to open specific verse (DEEP LINK)
+            Intent notificationIntent = new Intent(this, CategoryVersesActivity.class);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            notificationIntent.putExtra("verse_reference", verse.getReference());
+            notificationIntent.putExtra("verse_category", verse.getCategory());
+            notificationIntent.putExtra("from_notification", true);
+
+            // Create unique request code based on verse reference to avoid intent caching
+            int requestCode = verse.getReference().hashCode();
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this,
+                    requestCode,
+                    notificationIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // Create action buttons for the notification
+            PendingIntent shareIntent = createShareIntent(verse, requestCode + 1);
+            PendingIntent favoriteIntent = createFavoriteIntent(verse, requestCode + 2);
+
+            // Build the enhanced notification
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_book)
+                    .setContentTitle("📖 Ayah of the Hour")
+                    .setContentText(verse.getEnglishTranslation())
+                    .setStyle(new NotificationCompat.BigTextStyle()
+                            .bigText(verse.getEnglishTranslation() + "\n\n— " + verse.getReference())
+                            .setBigContentTitle("📖 " + verse.getCategory()))
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+
+            // Add action buttons if they were created successfully
+            if (shareIntent != null) {
+                builder.addAction(android.R.drawable.ic_menu_share, "Share", shareIntent);
+                Log.d(TAG, "Added share action to notification");
+            } else {
+                Log.w(TAG, "Share intent is null, not adding share action");
+            }
+
+            if (favoriteIntent != null) {
+                builder.addAction(android.R.drawable.btn_star_big_off, "Save", favoriteIntent);
+                Log.d(TAG, "Added favorite action to notification");
+            } else {
+                Log.w(TAG, "Favorite intent is null, not adding favorite action");
+            }
+
+            NotificationManager notificationManager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.notify(NOTIFICATION_ID, builder.build());
+                Log.d(TAG, "Notification sent successfully for verse: " + verse.getReference());
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending verse notification", e);
+        }
+    }
+
+    private PendingIntent createShareIntent(VerseData verse, int requestCode) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+
+        String shareText = verse.getArabicText() + "\n\n" +
+                verse.getEnglishTranslation() + "\n\n" +
+                "— " + verse.getReference() + "\n" +
+                "Category: " + verse.getCategory() + "\n\n" +
+                "Shared from Quran Verses App";
+
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Quran Verse - " + verse.getReference());
+
+        return PendingIntent.getActivity(
+                this,
+                requestCode,
+                Intent.createChooser(shareIntent, "Share Verse"),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+    }
 
-        // Build the notification
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_book) // You need to add this icon
-                .setContentTitle("Ayah of the Hour")
-                .setContentText(verse.getEnglishTranslation())
-                .setStyle(new NotificationCompat.BigTextStyle()
-                        .bigText(verse.getArabicText() + "\n\n" +
-                                verse.getEnglishTranslation() + "\n\n" +
-                                "- " + verse.getReference()))
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setCategory(NotificationCompat.CATEGORY_REMINDER)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+    private PendingIntent createFavoriteIntent(VerseData verse, int requestCode) {
+        try {
+            Intent favoriteIntent = new Intent(this, FavoriteActionReceiver.class);
+            favoriteIntent.setAction("ADD_TO_FAVORITES");
+            favoriteIntent.putExtra("verse_reference", verse.getReference());
+            favoriteIntent.putExtra("verse_category", verse.getCategory());
+            favoriteIntent.putExtra("verse_arabic", verse.getArabicText());
+            favoriteIntent.putExtra("verse_english", verse.getEnglishTranslation());
+            favoriteIntent.putExtra("verse_origin", verse.getOrigin());
 
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(NOTIFICATION_ID, builder.build());
+            Log.d(TAG, "Creating favorite intent for verse: " + verse.getReference());
+            Log.d(TAG, "Verse data - Arabic: " + (verse.getArabicText() != null ? "Present" : "NULL"));
+            Log.d(TAG, "Verse data - English: " + (verse.getEnglishTranslation() != null ? "Present" : "NULL"));
+
+            return PendingIntent.getBroadcast(
+                    this,
+                    requestCode,
+                    favoriteIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating favorite intent", e);
+            return null;
+        }
     }
 }

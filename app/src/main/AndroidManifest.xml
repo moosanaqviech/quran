@@ -14,6 +14,7 @@
         tools:targetApi="31" >
         <activity
             android:name=".MainActivity"
+            android:theme="@style/QuranAppTheme"
             android:exported="true"
             android:label="Main">
             <intent-filter>
@@ -30,6 +31,39 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
+
+        <activity
+            android:name=".CategoryBrowseActivity"
+            android:label="Browse Categories"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".CategoryVersesActivity"
+            android:label="Category Verses"
+            android:parentActivityName=".CategoryBrowseActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".CategoryBrowseActivity" />
+        </activity>
+
+
+        <activity
+            android:name=".FavoritesActivity"
+            android:label="Favorite Verses"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+
 
         <!-- Notification Service -->
         <service
@@ -64,21 +98,20 @@
     <!-- Add these permissions outside <application> tag -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
-    <!-- New permissions for hourly notifications -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
-    <!-- For Android 14+ (API 34+) -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
 
     <!-- For Android 13+ notification permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Add this permission for sharing images -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+
+
 
 
 </manifest>

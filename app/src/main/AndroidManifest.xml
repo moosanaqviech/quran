@@ -3,20 +3,21 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+        android:name=".QuranVersesApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="Quran Ayah"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication"
-        tools:targetApi="31" >
+        tools:targetApi="35" >
         <activity
             android:name=".MainActivity"
             android:theme="@style/QuranAppTheme"
             android:exported="true"
-            android:label="Main">
+            android:label="Quran Ayah">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -72,25 +73,20 @@
             android:exported="false"
             android:foregroundServiceType="shortService" />
 
+        <receiver
+            android:name=".FavoriteActionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ADD_TO_FAVORITES" />
+            </intent-filter>
+        </receiver>
         <!-- Broadcast Receiver for Alarms -->
         <receiver
             android:name=".VerseNotificationReceiver"
             android:enabled="true"
             android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Boot receiver to reschedule notifications after device restart -->
-        <receiver android:name=".BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter android:priority="1000">
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
+           
         </receiver>
 
     </application>

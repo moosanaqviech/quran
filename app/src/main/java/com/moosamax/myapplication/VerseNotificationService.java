@@ -1,3 +1,4 @@
+/*
 package com.moosamax.myapplication;
 
 import android.app.Notification;
@@ -17,33 +18,28 @@ public class VerseNotificationService extends Service {
     private static final String TAG = "VerseNotificationService";
     private static final String CHANNEL_ID = "QuranVersesChannel";
     private static final String CHANNEL_NAME = "Quran Verses Notifications";
-    private static final String FOREGROUND_CHANNEL_ID = "QuranServiceChannel";
-    private static final String FOREGROUND_CHANNEL_NAME = "Quran Service";
     private static final int NOTIFICATION_ID = 1001;
-    private static final int FOREGROUND_NOTIFICATION_ID = 1002;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannels();
+        createNotificationChannel();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Start foreground service immediately to avoid the exception
-        startForegroundService();
-
-        if (intent != null && intent.getAction() != null) {
-            switch (intent.getAction()) {
-                case "SEND_VERSE_NOTIFICATION":
-                    sendVerseNotification();
-                    break;
+        // Handle notification in background thread to avoid ANR
+        new Thread(() -> {
+            if (intent != null && intent.getAction() != null) {
+                switch (intent.getAction()) {
+                    case "SEND_VERSE_NOTIFICATION":
+                        sendVerseNotification();
+                        break;
+                }
             }
-        }
-
-        // Stop the service after sending notification
-        stopForeground(true);
-        stopSelf();
+            // Stop the service after completing work
+            stopSelf();
+        }).start();
 
         return START_NOT_STICKY;
     }
@@ -54,27 +50,7 @@ public class VerseNotificationService extends Service {
         return null;
     }
 
-    private void startForegroundService() {
-        // Create a simple foreground notification
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 0, mainIntent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0
-        );
-
-        Notification foregroundNotification = new NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_book)
-                .setContentTitle("Quran Verses")
-                .setContentText("Preparing daily verse...")
-                .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setCategory(NotificationCompat.CATEGORY_SERVICE)
-                .build();
-
-        startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification);
-    }
-
-    private void createNotificationChannels() {
+    private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = getSystemService(NotificationManager.class);
 
@@ -88,16 +64,6 @@ public class VerseNotificationService extends Service {
             verseChannel.enableVibration(true);
             verseChannel.setVibrationPattern(new long[]{0, 250, 250, 250});
             manager.createNotificationChannel(verseChannel);
-
-            // Channel for foreground service
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    FOREGROUND_CHANNEL_ID,
-                    FOREGROUND_CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            serviceChannel.setDescription("Background service for sending verse notifications");
-            serviceChannel.setShowBadge(false);
-            manager.createNotificationChannel(serviceChannel);
         }
     }
 
@@ -120,8 +86,8 @@ public class VerseNotificationService extends Service {
             // Create intent to open specific verse (DEEP LINK)
             Intent notificationIntent = new Intent(this, CategoryVersesActivity.class);
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            notificationIntent.putExtra("CATEGORY_NAME", verse.getCategory());
             notificationIntent.putExtra("verse_reference", verse.getReference());
-            notificationIntent.putExtra("verse_category", verse.getCategory());
             notificationIntent.putExtra("from_notification", true);
 
             // Create unique request code based on verse reference to avoid intent caching
@@ -156,15 +122,11 @@ public class VerseNotificationService extends Service {
             if (shareIntent != null) {
                 builder.addAction(android.R.drawable.ic_menu_share, "Share", shareIntent);
                 Log.d(TAG, "Added share action to notification");
-            } else {
-                Log.w(TAG, "Share intent is null, not adding share action");
             }
 
             if (favoriteIntent != null) {
                 builder.addAction(android.R.drawable.btn_star_big_off, "Save", favoriteIntent);
                 Log.d(TAG, "Added favorite action to notification");
-            } else {
-                Log.w(TAG, "Favorite intent is null, not adding favorite action");
             }
 
             NotificationManager notificationManager =
@@ -211,8 +173,6 @@ public class VerseNotificationService extends Service {
             favoriteIntent.putExtra("verse_origin", verse.getOrigin());
 
             Log.d(TAG, "Creating favorite intent for verse: " + verse.getReference());
-            Log.d(TAG, "Verse data - Arabic: " + (verse.getArabicText() != null ? "Present" : "NULL"));
-            Log.d(TAG, "Verse data - English: " + (verse.getEnglishTranslation() != null ? "Present" : "NULL"));
 
             return PendingIntent.getBroadcast(
                     this,
@@ -225,4 +185,4 @@ public class VerseNotificationService extends Service {
             return null;
         }
     }
-}
+}*/

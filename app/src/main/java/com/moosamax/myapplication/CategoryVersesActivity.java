@@ -69,6 +69,9 @@ public class CategoryVersesActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Update setupViewPager method to track verse views
+     */
     private void setupViewPager() {
         pagerAdapter = new VersesPagerAdapter(verses);
 
@@ -87,13 +90,20 @@ public class CategoryVersesActivity extends AppCompatActivity {
 
         viewPager.setAdapter(pagerAdapter);
 
-        // Update counter when page changes
+        // Update counter when page changes AND track verse views
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
                 updateVerseCounter(position);
                 updateHeaderFavoriteButton(verses.get(position));
+
+                // Track verse view for recent verses
+                if (position < verses.size()) {
+                    VerseData currentVerse = verses.get(position);
+                    MainActivity.trackVerseView(CategoryVersesActivity.this, currentVerse);
+                    Log.d("CategoryVersesActivity", "Tracked verse view: " + currentVerse.getReference());
+                }
             }
         });
 
@@ -101,6 +111,9 @@ public class CategoryVersesActivity extends AppCompatActivity {
         updateVerseCounter(0);
         if (!verses.isEmpty()) {
             updateHeaderFavoriteButton(verses.get(0));
+
+            // Track initial verse view
+            MainActivity.trackVerseView(this, verses.get(0));
         }
     }
 
@@ -175,5 +188,33 @@ public class CategoryVersesActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+    }
+
+    /**
+     * Handle deep linking to a specific verse
+     */
+    private void handleDeepLink() {
+        String targetVerseReference = getIntent().getStringExtra("INITIAL_VERSE_REFERENCE");
+        boolean fromNotification = getIntent().getBooleanExtra("from_notification", false);
+
+        if (targetVerseReference != null && !verses.isEmpty()) {
+            // Find the verse in current category
+            for (int i = 0; i < verses.size(); i++) {
+                if (verses.get(i).getReference().equals(targetVerseReference)) {
+                    // Navigate to specific verse
+                    viewPager.setCurrentItem(i, false);
+
+                    if (fromNotification) {
+                        // Show a subtle indication that this came from notification
+                        android.widget.Toast.makeText(this,
+                                "📖 Opened from notification",
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    }
+
+                    Log.d("CategoryVersesActivity", "Deep linked to verse: " + targetVerseReference);
+                    break;
+                }
+            }
+        }
     }
 }

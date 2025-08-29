@@ -1,3 +1,4 @@
+/*
 package com.moosamax.myapplication;
 
 import android.app.AlarmManager;
@@ -7,14 +8,20 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.util.Log;
 import java.util.Calendar;
 
 public class VerseNotificationReceiver extends BroadcastReceiver {
 
+    private static final String TAG = "VerseNotificationReceiver";
+
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.d(TAG, "VerseNotificationReceiver triggered");
+
         // Check if notifications are enabled
         if (!NotificationScheduler.areNotificationsEnabled(context)) {
+            Log.d(TAG, "Notifications disabled, skipping");
             return;
         }
 
@@ -46,26 +53,89 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
             markNotificationSentInInterval(context, customInterval);
         }
 
-        // Send the notification
+        // Send the notification using regular service start (Android 15 compatible)
         Intent serviceIntent = new Intent(context, VerseNotificationService.class);
         serviceIntent.setAction("SEND_VERSE_NOTIFICATION");
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent);
-        } else {
+        // Use regular service start for ALL Android versions
+        // This avoids the Android 15 foreground service restriction
+        try {
             context.startService(serviceIntent);
+            Log.d(TAG, "Started VerseNotificationService");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start notification service", e);
+            // Fallback: Send notification directly without service
+            sendNotificationDirectly(context);
         }
 
-        // For Android M and above with exact alarms, reschedule the next notification
-        // because setExactAndAllowWhileIdle doesn't repeat automatically
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !inexactMode) {
-            rescheduleNextCustomNotification(context, customInterval);
+        // IMPORTANT: For periodic notifications, reschedule the next alarm
+        // This ensures continuous periodic notifications
+        rescheduleNextCustomNotification(context, customInterval);
+    }
+
+    */
+/**
+     * Fallback method to send notification directly without service
+     * This is used if the service fails to start
+     *//*
+
+    private void sendNotificationDirectly(Context context) {
+        try {
+            Log.d(TAG, "Sending notification directly (service fallback)");
+
+            // Initialize repository if needed
+            VerseRepository.getInstance(context).initialize();
+
+            // Get a random verse
+            VerseData verse = VerseRepository.getRandomVerse();
+            if (verse == null) {
+                Log.e(TAG, "No verse available for direct notification");
+                return;
+            }
+
+            // Create basic notification without service
+            android.app.NotificationManager notificationManager =
+                    (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+            if (notificationManager != null) {
+                // Create notification channel if needed
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.app.NotificationChannel channel = new android.app.NotificationChannel(
+                            "QuranVersesChannel",
+                            "Quran Verses Notifications",
+                            android.app.NotificationManager.IMPORTANCE_DEFAULT
+                    );
+                    notificationManager.createNotificationChannel(channel);
+                }
+
+                // Create basic notification
+                androidx.core.app.NotificationCompat.Builder builder =
+                        new androidx.core.app.NotificationCompat.Builder(context, "QuranVersesChannel")
+                                .setSmallIcon(R.drawable.ic_book)
+                                .setContentTitle("📖 Ayah of the Hour")
+                                .setContentText(verse.getEnglishTranslation())
+                                .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle()
+                                        .bigText(verse.getEnglishTranslation() + "\n\n— " + verse.getReference()))
+                                .setAutoCancel(true)
+                                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT);
+
+                notificationManager.notify(1001, builder.build());
+                Log.d(TAG, "Direct notification sent successfully");
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending direct notification", e);
         }
     }
 
-    /**
+    // ... rest of the existing methods remain the same ...
+    // (isTimeForCustomNotification, wasNotificationSentInInterval, etc.)
+
+    */
+/**
      * Check if current time is appropriate for a custom interval notification
-     */
+     *//*
+
     private boolean isTimeForCustomNotification(Context context, int intervalMinutes) {
         Calendar now = Calendar.getInstance();
         int currentHour = now.get(Calendar.HOUR_OF_DAY);
@@ -95,9 +165,11 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
         return intervalRemainder <= toleranceMinutes || intervalRemainder >= (intervalMinutes - toleranceMinutes);
     }
 
-    /**
+    */
+/**
      * Check if we already sent a notification in this interval period
-     */
+     *//*
+
     private boolean wasNotificationSentInInterval(Context context, int intervalMinutes) {
         SharedPreferences prefs = context.getSharedPreferences("NotificationTracker", Context.MODE_PRIVATE);
         Calendar now = Calendar.getInstance();
@@ -127,9 +199,11 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
         return prefs.getBoolean(intervalKey, false);
     }
 
-    /**
+    */
+/**
      * Mark that we sent a notification in this interval period
-     */
+     *//*
+
     private void markNotificationSentInInterval(Context context, int intervalMinutes) {
         SharedPreferences prefs = context.getSharedPreferences("NotificationTracker", Context.MODE_PRIVATE);
         Calendar now = Calendar.getInstance();
@@ -160,9 +234,11 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
         cleanupOldNotificationRecords(prefs, now);
     }
 
-    /**
+    */
+/**
      * Clean up old notification tracking records
-     */
+     *//*
+
     private void cleanupOldNotificationRecords(SharedPreferences prefs, Calendar now) {
         SharedPreferences.Editor editor = prefs.edit();
 
@@ -180,9 +256,11 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
         editor.apply();
     }
 
-    /**
+    */
+/**
      * Reschedule the next notification for custom intervals
-     */
+     *//*
+
     private void rescheduleNextCustomNotification(Context context, int intervalMinutes) {
         // Only reschedule for exact alarm mode
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -255,36 +333,4 @@ public class VerseNotificationReceiver extends BroadcastReceiver {
             );
         }
     }
-
-    /**
-     * Legacy method for backward compatibility with hourly notifications
-     */
-    @Deprecated
-    private boolean isTimeForNotification(Context context) {
-        return isTimeForCustomNotification(context, 60); // Default to hourly
-    }
-
-    /**
-     * Legacy method for backward compatibility
-     */
-    @Deprecated
-    private boolean wasNotificationSentThisHour(Context context) {
-        return wasNotificationSentInInterval(context, 60);
-    }
-
-    /**
-     * Legacy method for backward compatibility
-     */
-    @Deprecated
-    private void markNotificationSentThisHour(Context context) {
-        markNotificationSentInInterval(context, 60);
-    }
-
-    /**
-     * Legacy method for backward compatibility
-     */
-    @Deprecated
-    private void rescheduleNextNotification(Context context) {
-        rescheduleNextCustomNotification(context, 60);
-    }
-}
+}*/

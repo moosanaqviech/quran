@@ -1,3 +1,4 @@
+/*
 package com.moosamax.myapplication;
 
 import android.content.Context;
@@ -64,4 +65,4 @@ public class NotificationHelper {
         // Cancel work
         WorkManager.getInstance(context).cancelAllWorkByTag(WORK_TAG);
     }
-}
+}*/

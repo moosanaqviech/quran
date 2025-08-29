@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'com.moosamax.myapplication'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.moosamax.myapplication"
         minSdk 26
-        targetSdk 34
-        versionCode 3
-        versionName "1.0.01"
+        targetSdk 35
+        versionCode 8
+        versionName "1.0.04"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,5 +46,6 @@ dependencies {
     // ViewPager2 (might already be included)
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
 
-    implementation "androidx.work:work-runtime:2.8.1"
+    implementation "androidx.work:work-runtime:2.9.0"
+
 }

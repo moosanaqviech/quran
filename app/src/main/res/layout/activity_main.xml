@@ -30,7 +30,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Quran Verses"
+                    android:text="Quran Ayats"
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="#333333" />
@@ -218,6 +218,91 @@
                         android:textColor="#666666" />
 
                 </LinearLayout>
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Test 2min"
+                    android:textSize="10sp"
+                    android:onClick="testPureWorkManager" />
+
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Immediate"
+                    android:textSize="10sp"
+                    android:onClick="testImmediateWorkManager" />
+
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Status"
+                    android:textSize="10sp"
+                    android:onClick="viewPureWorkManagerStatus" />
+
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Cancel"
+                    android:textSize="10sp"
+                    android:onClick="cancelPureWorkManager" />
+            </LinearLayout>
+
+            <!-- Recent Verses Section -->
+            <LinearLayout
+                android:id="@+id/recent_verses_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp"
+                android:visibility="gone">
+
+                <!-- Recent Verses Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/recent_verses_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Recently Viewed"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#2C3E50" />
+
+                    <TextView
+                        android:id="@+id/view_all_recent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="View All"
+                        android:textSize="14sp"
+                        android:textColor="#3498DB"
+                        android:textStyle="bold"
+                        android:padding="8dp"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                </LinearLayout>
+
+                <!-- Recent Verses Container -->
+                <LinearLayout
+                    android:id="@+id/recent_verses_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Recent verse items will be added here dynamically -->
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -233,7 +318,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Explore Categories"
+                    android:text="Explore Topics"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#2C3E50" />
@@ -266,7 +351,7 @@
             </LinearLayout>
 
 
-         </LinearLayout>
+        </LinearLayout>
 
     </ScrollView>
 
@@ -390,5 +475,6 @@
         </LinearLayout>
 
     </LinearLayout>
+
 
 </RelativeLayout>

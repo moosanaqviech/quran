@@ -18,6 +18,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -45,6 +47,11 @@ public class MainActivity extends AppCompatActivity {
     // Current selected tab index (0=Home, 1=Verses, 2=Favorites, 3=Settings)
     private int currentTabIndex = 0;
 
+    private RecentVersesManager recentVersesManager;
+    private LinearLayout recentVersesSection;
+    private TextView recentVersesTitle;
+    private LinearLayout recentVersesContainer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,9 +66,12 @@ public class MainActivity extends AppCompatActivity {
         // Initialize the verse repository
         VerseRepository.getInstance(this).initialize();
 
-        // Initialize views
+        // Initialize views (includes recent verses now)
         initViews();
         initBottomNavigation();
+
+        // Initialize recent verses section
+        //initRecentVersesSection();
 
         // Load verse content first
         loadVerseContent();
@@ -70,9 +80,8 @@ public class MainActivity extends AppCompatActivity {
         // Populate categories dynamically (after repository is initialized)
         populateCategories();
 
-        // Load verse content
-        loadVerseContent();
-        updateStatistics();
+        // Update recent verses display
+        //updateRecentVersesDisplay();
 
         // Request notification permission for Android 13+
         requestNotificationPermission();
@@ -88,7 +97,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Set home as selected by default
         updateTabSelection(0);
+
+
     }
+
 
     /**
      * Debug method to check VerseRepository state
@@ -531,28 +543,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Load verse content from repository
-     */
-    private void loadVerseContent() {
-        // Get the verse of the day (changes only once per day)
-        VerseData todayVerse = getVerseOfTheDay();
-
-        if (verseOfDayArabic != null) {
-            verseOfDayArabic.setText(todayVerse.getArabicText());
-        }
-
-        if (verseOfDayEnglish != null) {
-            verseOfDayEnglish.setText(todayVerse.getEnglishTranslation());
-        }
-
-        if (verseOfDayReference != null) {
-            verseOfDayReference.setText(todayVerse.getReference());
-        }
-
-        // Update date indicator
-        updateDateIndicator();
-    }
+//    /**
+//     * Load verse content from repository
+//     */
+//    private void loadVerseContent() {
+//        // Get the verse of the day (changes only once per day)
+//        VerseData todayVerse = getVerseOfTheDay();
+//
+//        if (verseOfDayArabic != null) {
+//            verseOfDayArabic.setText(todayVerse.getArabicText());
+//        }
+//
+//        if (verseOfDayEnglish != null) {
+//            verseOfDayEnglish.setText(todayVerse.getEnglishTranslation());
+//        }
+//
+//        if (verseOfDayReference != null) {
+//            verseOfDayReference.setText(todayVerse.getReference());
+//        }
+//
+//        // Update date indicator
+//        updateDateIndicator();
+//    }
 
     /**
      * Update the date indicator to show when verse was last updated
@@ -589,7 +601,7 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("🔄 Refresh Verse")
                 .setMessage("Choose how you'd like to refresh today's verse:")
                 .setPositiveButton("✨ Get New Verse", (dialog, which) -> {
-                    forceRefreshVerseOfDay();
+                    getNewVerseOfDay(); // Changed from forceRefreshVerseOfDay()
                     Toast.makeText(this, "✨ New verse selected for today!", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("🔄 Reload Current", (dialog, which) -> {
@@ -600,6 +612,9 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Get verse of the day - changes only once per day
+     */
     /**
      * Get verse of the day - changes only once per day
      */
@@ -621,7 +636,7 @@ public class MainActivity extends AppCompatActivity {
         if (!currentDate.equals(storedDate) || storedVerseReference.isEmpty()) {
             Log.d("MainActivity", "Getting new verse of the day");
 
-            // Get a new random verse for today
+            // Get a new random verse for today (use just the date for normal daily rotation)
             VerseData newVerse = getRandomVerseForDate(currentDate);
 
             // Store the new verse and date
@@ -648,6 +663,7 @@ public class MainActivity extends AppCompatActivity {
             return new VerseData(storedArabic, storedEnglish, storedVerseReference, storedCategory, storedOrigin);
         }
     }
+
 
     /**
      * Public method to get today's verse (can be used by other activities)
@@ -685,7 +701,11 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Get a random verse for a specific date (ensures same verse for same date)
      */
-    private VerseData getRandomVerseForDate(String date) {
+    /**
+     * Get a random verse for a specific date (ensures same verse for same date)
+     * Updated to support refresh functionality with unique seeds
+     */
+    private VerseData getRandomVerseForDate(String dateSeed) {
         List<VerseData> allVerses = VerseRepository.getAllVerses();
 
         if (allVerses.isEmpty()) {
@@ -699,32 +719,84 @@ public class MainActivity extends AppCompatActivity {
             );
         }
 
-        // Use date as seed for consistent randomness (same date = same verse)
-        int seed = date.hashCode();
+        // Use dateSeed as seed for consistent randomness
+        int seed = dateSeed.hashCode();
         java.util.Random random = new java.util.Random(seed);
 
-        // Get random verse based on date seed
+        // Get random verse based on seed
         int index = random.nextInt(allVerses.size());
         VerseData selectedVerse = allVerses.get(index);
 
-        Log.d("MainActivity", "Selected verse for date " + date + ": " + selectedVerse.getReference() + " (index: " + index + " of " + allVerses.size() + ")");
+        Log.d("MainActivity", "Selected verse for seed " + dateSeed + ": " + selectedVerse.getReference() +
+                " (index: " + index + " of " + allVerses.size() + ")");
 
         return selectedVerse;
     }
 
     /**
-     * Force refresh verse of the day (for manual refresh)
+     * Force refresh verse of the day (for manual refresh) - DEPRECATED, use getNewVerseOfDay() instead
      */
+    @Deprecated
     private void forceRefreshVerseOfDay() {
-        // Clear stored verse to force new selection
+        // This method is now deprecated, redirecting to new method
+        getNewVerseOfDay();
+    }
+
+
+    /**
+     * Get a new verse for today (replaces the current verse of the day)
+     */
+    private void getNewVerseOfDay() {
+        Log.d("MainActivity", "Getting new verse for today");
+
         SharedPreferences prefs = getSharedPreferences("verse_of_day", MODE_PRIVATE);
+        String currentDate = getCurrentDateString();
+
+        // Get a new random verse (different from current one if possible)
+        VerseData currentVerse = null;
+        String currentReference = prefs.getString("verse_reference", "");
+
+        // Try to find current verse to avoid duplicating it
+        if (!currentReference.isEmpty()) {
+            List<VerseData> allVerses = VerseRepository.getAllVerses();
+            for (VerseData verse : allVerses) {
+                if (verse.getReference().equals(currentReference)) {
+                    currentVerse = verse;
+                    break;
+                }
+            }
+        }
+
+        // Get a new random verse (try to avoid same verse)
+        VerseData newVerse = getRandomVerseForDate(currentDate + "_refresh_" + System.currentTimeMillis());
+
+        // If we got the same verse and there are multiple verses available, try again
+        if (currentVerse != null && newVerse.getReference().equals(currentVerse.getReference())) {
+            List<VerseData> allVerses = VerseRepository.getAllVerses();
+            if (allVerses.size() > 1) {
+                // Try up to 5 times to get a different verse
+                for (int i = 0; i < 5; i++) {
+                    newVerse = getRandomVerseForDate(currentDate + "_refresh_" + System.currentTimeMillis() + "_" + i);
+                    if (!newVerse.getReference().equals(currentVerse.getReference())) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Store the new verse with today's date
         SharedPreferences.Editor editor = prefs.edit();
-        editor.clear();
+        editor.putString("last_date", currentDate);
+        editor.putString("verse_reference", newVerse.getReference());
+        editor.putString("verse_arabic", newVerse.getArabicText());
+        editor.putString("verse_english", newVerse.getEnglishTranslation());
+        editor.putString("verse_category", newVerse.getCategory());
+        editor.putString("verse_origin", newVerse.getOrigin());
         editor.apply();
 
-        Log.d("MainActivity", "Forced refresh of verse of the day");
+        Log.d("MainActivity", "Set new verse of the day: " + newVerse.getReference());
 
-        // Reload verse content
+        // Reload the verse content to display the new verse
         loadVerseContent();
     }
 
@@ -743,6 +815,11 @@ public class MainActivity extends AppCompatActivity {
         int favoritesCountValue = favoritesManager.getFavoriteCount();
         if (favoritesCount != null) {
             favoritesCount.setText(String.valueOf(favoritesCountValue));
+        }
+
+        // Update recent verses display
+        if (recentVersesManager != null) {
+            updateRecentVersesDisplay();
         }
 
         // Update category counts
@@ -827,6 +904,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Handle tab selection
+     *
      * @param tabIndex Index of selected tab (0-3)
      */
     private void onTabSelected(int tabIndex) {
@@ -858,6 +936,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Update visual selection state of tabs
+     *
      * @param selectedIndex Index of selected tab
      */
     private void updateTabSelection(int selectedIndex) {
@@ -895,6 +974,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Set tab visual state to selected
+     *
      * @param tab Tab layout to style as selected
      */
     private void setTabSelected(LinearLayout tab) {
@@ -911,6 +991,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Set tab visual state to unselected
+     *
      * @param tab Tab layout to style as unselected
      */
     private void setTabUnselected(LinearLayout tab) {
@@ -984,14 +1065,16 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Show dialog to setup hourly notifications when app first launches
      */
-    private void showNotificationSetupDialog() {
+    private void showNotificationSetupDialogOld() {
         new AlertDialog.Builder(this)
                 .setTitle("Hourly Verse Notifications")
-                .setMessage("Would you like to receive hourly Quran verse notifications during the day?\n\nDefault schedule: 9:00 AM to 9:00 PM")
+                .setMessage("Would you like to receive hourly Quran verse notifications during the day?\n\nDefault schedule: 9:00 AM to 9:00 PM\n\n(Uses modern scheduling for better reliability)")
                 .setPositiveButton("Yes", (dialog, which) -> {
-                    // Enable hourly notifications with default time period (9 AM to 9 PM)
-                    NotificationScheduler.scheduleHourlyVerseNotifications(this, 9, 0, 21, 0);
-                    Toast.makeText(this, "Hourly notifications enabled from 9:00 AM to 9:00 PM", Toast.LENGTH_LONG).show();
+                    // Enable hourly notifications with WorkManager backup
+                    NotificationScheduler.scheduleCustomIntervalNotificationsWithBackup(
+                            this, 9, 0, 21, 0, NotificationScheduler.INTERVAL_1_HOUR);
+                    Toast.makeText(this, "Hourly notifications enabled from 9:00 AM to 9:00 PM",
+                            Toast.LENGTH_LONG).show();
                 })
                 .setNegativeButton("Not now", null)
                 .setNeutralButton("Customize", (dialog, which) -> {
@@ -1049,20 +1132,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Method to manually send test notification (for debugging)
-     * This will only send if within the current notification period
-     */
-    public void sendTestNotification() {
-        if (NotificationScheduler.isWithinNotificationPeriod(this)) {
-            Intent serviceIntent = new Intent(this, VerseNotificationService.class);
-            serviceIntent.setAction("SEND_VERSE_NOTIFICATION");
-            startService(serviceIntent);
-            Toast.makeText(this, "Test notification sent", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Current time is outside notification period", Toast.LENGTH_SHORT).show();
-        }
-    }
 
     /**
      * Public method to refresh categories manually (for testing)
@@ -1149,6 +1218,11 @@ public class MainActivity extends AppCompatActivity {
         loadVerseContent();
         updateStatistics();
 
+        // Refresh recent verses display
+        if (recentVersesManager != null) {
+            updateRecentVersesDisplay();
+        }
+
         // Check if we need to dynamically update categories
         checkAndUpdateCategories();
     }
@@ -1215,5 +1289,568 @@ public class MainActivity extends AppCompatActivity {
         categoryEmojis.put("Good Deeds", "✨");
 
         return categoryEmojis.getOrDefault(category, "📖");
+    }
+
+    // Add this method to initViews() in MainActivity
+    private void initRecentVersesSection() {
+        // Initialize recent verses manager
+        recentVersesManager = new RecentVersesManager(this);
+
+        // You'll need to add these to your activity_main.xml layout
+        // or create them dynamically
+        recentVersesSection = findViewById(R.id.recent_verses_section);
+        recentVersesTitle = findViewById(R.id.recent_verses_title);
+        recentVersesContainer = findViewById(R.id.recent_verses_container);
+
+        // If the views don't exist in layout, create them dynamically
+        if (recentVersesSection == null) {
+            createRecentVersesSectionDynamically();
+        }
+    }
+
+    /**
+     * Create recent verses section dynamically if not in layout
+     */
+    private void createRecentVersesSectionDynamically() {
+        LinearLayout mainContainer = findViewById(R.id.categories_container);
+        if (mainContainer == null) {
+            Log.w("MainActivity", "Cannot create recent verses section - main container not found");
+            return;
+        }
+
+        // Create section container
+        recentVersesSection = new LinearLayout(this);
+        recentVersesSection.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        recentVersesSection.setOrientation(LinearLayout.VERTICAL);
+        recentVersesSection.setVisibility(View.GONE); // Hidden by default
+
+        // Create title with "View All" button
+        LinearLayout titleLayout = new LinearLayout(this);
+        titleLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        titleLayout.setOrientation(LinearLayout.HORIZONTAL);
+        titleLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+        // Title text
+        recentVersesTitle = new TextView(this);
+        recentVersesTitle.setText("Recently Viewed");
+        recentVersesTitle.setTextSize(18);
+        recentVersesTitle.setTextColor(0xFF2C3E50);
+        recentVersesTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f
+        );
+        recentVersesTitle.setLayoutParams(titleParams);
+
+        // View All button
+        TextView viewAllButton = new TextView(this);
+        viewAllButton.setText("View All");
+        viewAllButton.setTextSize(14);
+        viewAllButton.setTextColor(0xFF3498DB);
+        viewAllButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        viewAllButton.setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8));
+        viewAllButton.setBackground(getSelectableItemBackground());
+        viewAllButton.setClickable(true);
+        viewAllButton.setFocusable(true);
+        viewAllButton.setOnClickListener(v -> showAllRecentVerses());
+
+        titleLayout.addView(recentVersesTitle);
+        titleLayout.addView(viewAllButton);
+
+        // Create container for recent verses
+        recentVersesContainer = new LinearLayout(this);
+        recentVersesContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        recentVersesContainer.setOrientation(LinearLayout.VERTICAL);
+
+        recentVersesSection.addView(titleLayout);
+        recentVersesSection.addView(recentVersesContainer);
+
+        // Add to main container (insert before categories or at top)
+        mainContainer.addView(recentVersesSection, 0);
+
+        Log.d("MainActivity", "Created recent verses section dynamically");
+    }
+
+    /**
+     * Update recent verses display
+     */
+    private void updateRecentVersesDisplay() {
+        if (recentVersesManager == null || recentVersesContainer == null) {
+            return;
+        }
+
+        List<VerseData> recentVerses = recentVersesManager.getRecentVerses();
+
+        if (recentVerses.isEmpty()) {
+            // Hide section if no recent verses
+            if (recentVersesSection != null) {
+                recentVersesSection.setVisibility(View.GONE);
+            }
+            return;
+        }
+
+        // Show section
+        if (recentVersesSection != null) {
+            recentVersesSection.setVisibility(View.VISIBLE);
+        }
+
+        // Update title with count
+        if (recentVersesTitle != null) {
+            String titleText = "Recently Viewed (" + recentVerses.size() + ")";
+            recentVersesTitle.setText(titleText);
+        }
+
+        // Clear existing views
+        recentVersesContainer.removeAllViews();
+
+        // Show first 5 recent verses on main screen
+        int versesToShow = Math.min(5, recentVerses.size());
+
+        for (int i = 0; i < versesToShow; i++) {
+            VerseData verse = recentVerses.get(i);
+            String timeAgo = recentVersesManager.getTimeAgo(i);
+            createRecentVerseView(verse, timeAgo);
+        }
+
+        Log.d("MainActivity", "Updated recent verses display with " + versesToShow + " verses");
+    }
+
+    /**
+     * Create a view for a recent verse
+     */
+    private void createRecentVerseView(VerseData verse, String timeAgo) {
+        try {
+            // Create card view
+            androidx.cardview.widget.CardView cardView = new androidx.cardview.widget.CardView(this);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            cardParams.setMargins(0, 0, 0, dpToPx(8));
+            cardView.setLayoutParams(cardParams);
+            cardView.setRadius(dpToPx(8));
+            cardView.setCardElevation(dpToPx(2));
+            cardView.setUseCompatPadding(true);
+
+            // Make clickable
+            cardView.setForeground(getSelectableItemBackground());
+            cardView.setClickable(true);
+            cardView.setOnClickListener(v -> openVerseDetail(verse));
+
+            // Create content layout
+            LinearLayout contentLayout = new LinearLayout(this);
+            contentLayout.setLayoutParams(new androidx.cardview.widget.CardView.LayoutParams(
+                    androidx.cardview.widget.CardView.LayoutParams.MATCH_PARENT,
+                    androidx.cardview.widget.CardView.LayoutParams.WRAP_CONTENT
+            ));
+            contentLayout.setOrientation(LinearLayout.VERTICAL);
+            contentLayout.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
+
+            // Header (reference + time)
+            LinearLayout headerLayout = new LinearLayout(this);
+            headerLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            ));
+            headerLayout.setOrientation(LinearLayout.HORIZONTAL);
+            headerLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+            // Reference
+            TextView referenceView = new TextView(this);
+            referenceView.setText(verse.getReference());
+            referenceView.setTextSize(12);
+            referenceView.setTextColor(0xFF4CAF50);
+            referenceView.setTypeface(null, android.graphics.Typeface.BOLD);
+            LinearLayout.LayoutParams refParams = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f
+            );
+            referenceView.setLayoutParams(refParams);
+
+            // Time ago
+            TextView timeView = new TextView(this);
+            timeView.setText(timeAgo);
+            timeView.setTextSize(10);
+            timeView.setTextColor(0xFF999999);
+
+            headerLayout.addView(referenceView);
+            headerLayout.addView(timeView);
+
+            // English translation (truncated)
+            TextView englishView = new TextView(this);
+            String englishText = verse.getEnglishTranslation();
+            if (englishText.length() > 80) {
+                englishText = englishText.substring(0, 77) + "...";
+            }
+            englishView.setText(englishText);
+            englishView.setTextSize(13);
+            englishView.setTextColor(0xFF333333);
+            englishView.setMaxLines(2);
+            englishView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            LinearLayout.LayoutParams englishParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            englishParams.setMargins(0, dpToPx(4), 0, 0);
+            englishView.setLayoutParams(englishParams);
+
+            // Category tag
+            TextView categoryView = new TextView(this);
+            categoryView.setText(verse.getCategory());
+            categoryView.setTextSize(10);
+            categoryView.setTextColor(0xFFFFFFFF);
+            categoryView.setBackground(createCategoryTagBackground());
+            categoryView.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+            LinearLayout.LayoutParams categoryParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            categoryParams.setMargins(0, dpToPx(4), 0, 0);
+            categoryView.setLayoutParams(categoryParams);
+
+            contentLayout.addView(headerLayout);
+            contentLayout.addView(englishView);
+            contentLayout.addView(categoryView);
+
+            cardView.addView(contentLayout);
+            recentVersesContainer.addView(cardView);
+
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error creating recent verse view", e);
+        }
+    }
+
+    /**
+     * Create background for category tag
+     */
+    private android.graphics.drawable.Drawable createCategoryTagBackground() {
+        android.graphics.drawable.GradientDrawable drawable =
+                new android.graphics.drawable.GradientDrawable();
+        drawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        drawable.setColor(0xFF4CAF50);
+        drawable.setCornerRadius(dpToPx(4));
+        return drawable;
+    }
+
+    /**
+     * Open verse detail view
+     */
+    private void openVerseDetail(VerseData verse) {
+        Intent intent = new Intent(this, CategoryVersesActivity.class);
+        intent.putExtra("CATEGORY_NAME", verse.getCategory());
+        intent.putExtra("INITIAL_VERSE_REFERENCE", verse.getReference());
+        startActivity(intent);
+    }
+
+    /**
+     * Show all recent verses in a dialog or separate activity
+     */
+    private void showAllRecentVerses() {
+        List<VerseData> allRecentVerses = recentVersesManager.getRecentVerses();
+
+        if (allRecentVerses.isEmpty()) {
+            Toast.makeText(this, "No recent verses to show", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Create dialog with all recent verses
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("All Recent Verses (" + allRecentVerses.size() + ")");
+
+        StringBuilder versesText = new StringBuilder();
+        for (int i = 0; i < allRecentVerses.size(); i++) {
+            VerseData verse = allRecentVerses.get(i);
+            String timeAgo = recentVersesManager.getTimeAgo(i);
+
+            versesText.append((i + 1)).append(". ")
+                    .append(verse.getReference()).append(" (").append(timeAgo).append(")")
+                    .append("\n")
+                    .append(verse.getEnglishTranslation())
+                    .append("\n")
+                    .append("Category: ").append(verse.getCategory())
+                    .append("\n\n");
+        }
+
+        builder.setMessage(versesText.toString());
+        builder.setPositiveButton("Close", null);
+        builder.setNeutralButton("Clear All", (dialog, which) -> {
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("Clear Recent Verses")
+                    .setMessage("Are you sure you want to clear all recent verses?")
+                    .setPositiveButton("Clear", (d, w) -> {
+                        recentVersesManager.clearRecentVerses();
+                        updateRecentVersesDisplay();
+                        Toast.makeText(this, "Recent verses cleared", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+
+        builder.show();
+    }
+
+
+    // Update loadVerseContent() to track verse of the day views
+    private void loadVerseContent() {
+        // Get the verse of the day (changes only once per day)
+        VerseData todayVerse = getVerseOfTheDay();
+
+        if (verseOfDayArabic != null) {
+            verseOfDayArabic.setText(todayVerse.getArabicText());
+        }
+
+        if (verseOfDayEnglish != null) {
+            verseOfDayEnglish.setText(todayVerse.getEnglishTranslation());
+        }
+
+        if (verseOfDayReference != null) {
+            verseOfDayReference.setText(todayVerse.getReference());
+        }
+
+        // Add verse of the day to recent verses (but don't add multiple times per day)
+        if (recentVersesManager != null) {
+            // Only add if it's a new verse of the day or user manually refreshed
+            recentVersesManager.addRecentVerse(todayVerse);
+            updateRecentVersesDisplay();
+        }
+
+        // Update date indicator
+        updateDateIndicator();
+    }
+
+    // Add this method to track verse views from other activities
+    public void trackVerseView(VerseData verse) {
+        if (recentVersesManager != null && verse != null) {
+            recentVersesManager.addRecentVerse(verse);
+            updateRecentVersesDisplay();
+        }
+    }
+
+    /**
+     * Method to call when a verse is viewed from other activities
+     * Call this from CategoryVersesActivity when user views a verse
+     */
+    public static void trackVerseView(Context context, VerseData verse) {
+        if (context != null && verse != null) {
+            RecentVersesManager recentManager = new RecentVersesManager(context);
+            recentManager.addRecentVerse(verse);
+            Log.d("MainActivity", "Tracked verse view: " + verse.getReference());
+        }
+    }
+
+
+
+    public void testPureWorkManager(View view) {
+        Calendar now = Calendar.getInstance();
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+        int endHour = (currentHour + 1) % 24; // Test for 1 hour
+
+        // Start 2-minute interval notifications
+        QuranNotificationManager.startNotifications(this,
+                currentHour, currentMinute, endHour, currentMinute, 2);
+
+        String message = String.format("🧪 Pure WorkManager Test:\n%02d:%02d to %02d:%02d\nEvery 2 minutes",
+                currentHour, currentMinute, endHour, currentMinute);
+
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        logPureWorkManagerStatus();
+    }
+
+    /**
+     * Test immediate notification (force first worker to run)
+     */
+    public void testImmediateWorkManager(View view) {
+        // Cancel existing and start fresh with immediate execution
+        QuranNotificationManager.stopNotifications(this);
+
+        Calendar now = Calendar.getInstance();
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+        int endHour = (currentHour + 2) % 24;
+
+        // Clear last notification time to force immediate send
+        getSharedPreferences("notification_tracking", MODE_PRIVATE)
+                .edit().remove("last_notification_time").apply();
+
+        QuranNotificationManager.startNotifications(this,
+                currentHour, currentMinute, endHour, currentMinute, 5);
+
+        Toast.makeText(this, "🔔 Immediate WorkManager test started\nFirst notification in ~1 minute",
+                Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * View pure WorkManager status
+     */
+    public void viewPureWorkManagerStatus(View view) {
+        boolean enabled = QuranNotificationManager.isEnabled(this);
+
+        StringBuilder message = new StringBuilder();
+        message.append("🔧 Pure WorkManager System\n\n");
+        message.append("Status: ").append(enabled ? "✅ ENABLED" : "❌ DISABLED").append("\n\n");
+
+        if (enabled) {
+            String schedule = QuranNotificationManager.getFormattedSchedule(this);
+            message.append("Schedule: ").append(schedule).append("\n");
+
+            // Check current time vs period
+            int[] settings = QuranNotificationManager.getSettings(this);
+            Calendar now = Calendar.getInstance();
+            int currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+            int startMinutes = settings[0] * 60 + settings[1];
+            int endMinutes = settings[2] * 60 + settings[3];
+
+            boolean withinPeriod;
+            if (endMinutes <= startMinutes) {
+                withinPeriod = currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+            } else {
+                withinPeriod = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+            }
+
+            message.append("Active Now: ").append(withinPeriod ? "🟢 YES" : "🟡 NO").append("\n");
+
+            // Show last notification time
+            long lastTime = getSharedPreferences("notification_tracking", MODE_PRIVATE)
+                    .getLong("last_notification_time", 0);
+            if (lastTime > 0) {
+                long minutesAgo = (System.currentTimeMillis() - lastTime) / (60 * 1000);
+                message.append("Last Sent: ").append(minutesAgo).append(" minutes ago\n");
+            } else {
+                message.append("Last Sent: Never\n");
+            }
+
+            message.append("\n🚀 System Features:\n");
+            message.append("• Self-scheduling workers\n");
+            message.append("• Works with 2+ minute intervals\n");
+            message.append("• Intelligent delay calculation\n");
+            message.append("• Automatic period detection\n");
+            message.append("• Survives app kills & reboots\n");
+        }
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("📊 Pure WorkManager Status")
+                .setMessage(message.toString())
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Check Queue", (dialog, which) -> checkWorkManagerQueue())
+                .show();
+    }
+
+    /**
+     * Check WorkManager queue status
+     */
+    private void checkWorkManagerQueue() {
+        androidx.work.WorkManager workManager = androidx.work.WorkManager.getInstance(this);
+
+        // Get work info for our unique work
+        com.google.common.util.concurrent.ListenableFuture<java.util.List<androidx.work.WorkInfo>> workInfoFuture =
+                workManager.getWorkInfosForUniqueWork("QuranNotifications");
+
+        try {
+            java.util.List<androidx.work.WorkInfo> workInfos = workInfoFuture.get();
+
+            StringBuilder message = new StringBuilder();
+            message.append("🔍 WorkManager Queue Status:\n\n");
+
+            if (workInfos.isEmpty()) {
+                message.append("❌ No scheduled work found\n");
+                message.append("This means notifications are not active.\n\n");
+                message.append("Try enabling notifications again.");
+            } else {
+                message.append("Found ").append(workInfos.size()).append(" work item(s):\n\n");
+
+                for (int i = 0; i < workInfos.size(); i++) {
+                    androidx.work.WorkInfo workInfo = workInfos.get(i);
+                    message.append("• Work ").append(i + 1).append(": ").append(workInfo.getState()).append("\n");
+
+                    if (workInfo.getState() == androidx.work.WorkInfo.State.ENQUEUED) {
+                        message.append("  ⏰ Scheduled and waiting\n");
+                    } else if (workInfo.getState() == androidx.work.WorkInfo.State.RUNNING) {
+                        message.append("  🏃 Currently executing\n");
+                    } else if (workInfo.getState() == androidx.work.WorkInfo.State.SUCCEEDED) {
+                        message.append("  ✅ Completed successfully\n");
+                    } else if (workInfo.getState() == androidx.work.WorkInfo.State.FAILED) {
+                        message.append("  ❌ Failed - may need restart\n");
+                    } else if (workInfo.getState() == androidx.work.WorkInfo.State.CANCELLED) {
+                        message.append("  🚫 Cancelled\n");
+                    }
+                    message.append("\n");
+                }
+            }
+
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("🔍 Work Queue Details")
+                    .setMessage(message.toString())
+                    .setPositiveButton("OK", null)
+                    .show();
+
+        } catch (Exception e) {
+            android.util.Log.e("WorkManagerStatus", "Error checking work queue", e);
+            Toast.makeText(this, "Error checking WorkManager queue", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Cancel pure WorkManager notifications
+     */
+    public void cancelPureWorkManager(View view) {
+        QuranNotificationManager.stopNotifications(this);
+        Toast.makeText(this, "🚫 Pure WorkManager notifications cancelled", Toast.LENGTH_SHORT).show();
+        logPureWorkManagerStatus();
+    }
+
+    /**
+     * Log WorkManager status for debugging
+     */
+    private void logPureWorkManagerStatus() {
+        android.util.Log.d("PureWorkManagerTest", "=== PURE WORKMANAGER STATUS ===");
+
+        boolean enabled = QuranNotificationManager.isEnabled(this);
+        android.util.Log.d("PureWorkManagerTest", "Enabled: " + enabled);
+
+        if (enabled) {
+            int[] settings = QuranNotificationManager.getSettings(this);
+            android.util.Log.d("PureWorkManagerTest", String.format("Period: %02d:%02d to %02d:%02d",
+                    settings[0], settings[1], settings[2], settings[3]));
+            android.util.Log.d("PureWorkManagerTest", "Interval: " + settings[4] + " minutes");
+
+            long lastTime = getSharedPreferences("notification_tracking", MODE_PRIVATE)
+                    .getLong("last_notification_time", 0);
+            long minutesAgo = lastTime > 0 ? (System.currentTimeMillis() - lastTime) / (60 * 1000) : -1;
+            android.util.Log.d("PureWorkManagerTest", "Last notification: " + minutesAgo + " minutes ago");
+        }
+
+        android.util.Log.d("PureWorkManagerTest", "=== END STATUS ===");
+    }
+
+    /**
+     * Updated notification setup dialog for pure WorkManager
+     */
+    private void showNotificationSetupDialog() {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("📖 Quran Verse Notifications")
+                .setMessage("Enable Quran verse notifications with our reliable WorkManager system:\n\n" +
+                        "✅ Works with any interval (2+ minutes)\n" +
+                        "✅ Self-scheduling for reliability\n" +
+                        "✅ Survives app kills and reboots\n" +
+                        "✅ Battery optimized\n" +
+                        "✅ 100% Android 15 compatible")
+                .setPositiveButton("Enable", (dialog, which) -> {
+                    QuranNotificationManager.startNotifications(this, 9, 0, 21, 0, 60);
+                    Toast.makeText(this, "📱 Notifications enabled: Every hour, 9 AM - 9 PM",
+                            Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("Not now", null)
+                .setNeutralButton("Customize", (dialog, which) -> {
+                    navigateToSettings();
+                })
+                .show();
     }
 }
